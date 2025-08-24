@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../../store/store';
-import { toggleStartMenu } from '../../store/slices/uiSlice';
-import { _openInternalApp, focusApp, toggleMinimizeApp } from '../../store/slices/windowSlice';
+import { toggleStartMenu, pinApp, unpinApp } from '../../store/slices/uiSlice';
+import { _openInternalApp, focusApp, toggleMinimizeApp, closeApp, toggleMaximize } from '../../store/slices/windowSlice';
 import { getAppDefinitions, getAppDefinitionById } from '../../apps';
 import Icon from '../features/Icon';
 import { AppDefinition, OpenApp } from '../../types';
@@ -21,7 +21,7 @@ const Taskbar: React.FC = () => {
     const { pinnedApps } = useSelector((state: RootState) => state.ui);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [allApps, setAllApps] = useState<AppDefinition[]>([]);
-    const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; targetApp?: TaskbarApp } | null>(null);
 
     useEffect(() => {
         const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -92,13 +92,48 @@ const Taskbar: React.FC = () => {
 
     const closeContextMenu = () => setContextMenu(null);
 
-    const handleContextMenu = (e: React.MouseEvent) => {
+    const handleContextMenu = (e: React.MouseEvent, app?: TaskbarApp) => {
         e.preventDefault();
         e.stopPropagation();
-        setContextMenu({ x: e.clientX, y: e.clientY });
+        setContextMenu({ x: e.clientX, y: e.clientY, targetApp: app });
     };
 
     const generateContextMenuItems = (): ContextMenuItem[] => {
+        const app = contextMenu?.targetApp;
+        if (app) {
+            const isPinned = pinnedApps.includes(app.id);
+            const isOpen = 'instanceId' in app && app.isOpen;
+
+            const menuItems: ContextMenuItem[] = [];
+
+            // Add app name as a title item if possible (or just a disabled item)
+            menuItems.push({ type: 'item', label: app.name, disabled: true, onClick: () => {} });
+            menuItems.push({ type: 'separator' });
+
+            if (isOpen) {
+                const openApp = app as OpenApp;
+                if (!openApp.isMaximized) {
+                    menuItems.push({ type: 'item', label: 'Maximize', onClick: () => dispatch(toggleMaximize(openApp.instanceId)) });
+                } else {
+                    menuItems.push({ type: 'item', label: 'Restore', onClick: () => dispatch(toggleMaximize(openApp.instanceId)) });
+                }
+                if (!openApp.isMinimized) {
+                    menuItems.push({ type: 'item', label: 'Minimize', onClick: () => dispatch(toggleMinimizeApp(openApp.instanceId)) });
+                }
+                menuItems.push({ type: 'item', label: 'Close', onClick: () => dispatch(closeApp(openApp.instanceId)) });
+                menuItems.push({ type: 'separator' });
+            }
+
+            if (isPinned) {
+                menuItems.push({ type: 'item', label: 'Unpin from taskbar', onClick: () => dispatch(unpinApp(app.id)) });
+            } else {
+                menuItems.push({ type: 'item', label: 'Pin to taskbar', onClick: () => dispatch(pinApp(app.id)) });
+            }
+
+            return menuItems;
+        }
+
+        // Default taskbar menu
         return [
             { type: 'item', label: 'Taskbar settings', onClick: () => { console.log("Taskbar settings clicked") }, disabled: true },
         ];
@@ -123,6 +158,7 @@ const Taskbar: React.FC = () => {
                             <button
                                 key={buttonKey}
                                 onClick={() => handleAppIconClick(app)}
+                                onContextMenu={(e) => handleContextMenu(e, app)}
                                 className={`p-2 rounded h-[calc(100%-8px)] flex items-center relative transition-colors duration-150 ease-in-out ${app.isActive ? 'bg-white/20' : 'hover:bg-white/10'}`}
                                 title={app.name}
                             >

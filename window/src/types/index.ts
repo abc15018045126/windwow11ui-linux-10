@@ -25,6 +25,7 @@ export interface AppDefinition {
   icon: string; // Corresponds to an icon key
   component: AppComponentType;
   defaultSize?: { width: number; height: number };
+  /** A list of file extensions this app can open (e.g., ['.txt', '.md']). Used by the 'Open with' feature. */
   fileExtensions?: string[];
   allowMultipleInstances?: boolean;
   isExternal?: boolean;
