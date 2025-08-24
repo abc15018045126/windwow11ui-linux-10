@@ -71,6 +71,112 @@ export const Filesystem_v2_createFolder = async (relativePath: string, folderNam
 };
 
 /**
+ * @description Reads a .shortcut file and returns its target path.
+ * @param relativePath The path of the .shortcut file.
+ * @returns The target path as a string, or null if an error occurs.
+ */
+export const Filesystem_v2_readShortcutFile = async (relativePath: string): Promise<string | null> => {
+    const fullPath = resolveSafePath(relativePath);
+    if (!fullPath) return null;
+
+    try {
+        const content = await fs.readFile(fullPath, 'utf-8');
+        const shortcutData = JSON.parse(content);
+        if (typeof shortcutData.target === 'string') {
+            return shortcutData.target;
+        }
+        return null;
+    } catch (error) {
+        console.error(`[Filesystem_v2_readShortcutFile] Error reading shortcut ${relativePath}:`, error);
+        return null;
+    }
+};
+
+/**
+ * @description Creates a shortcut file for a given item.
+ * @param targetPath The relative path of the item to link to.
+ * @returns True if successful, false otherwise.
+ */
+export const Filesystem_v2_createShortcut = async (targetPath: string): Promise<boolean> => {
+    const targetFullPath = resolveSafePath(targetPath);
+    if (!targetFullPath) return false;
+
+    const targetDir = path.dirname(targetPath);
+    const targetName = path.basename(targetPath);
+    const shortcutName = `${targetName} - Shortcut.shortcut`;
+    const shortcutPath = path.join(targetDir, shortcutName);
+
+    const shortcutFullPath = resolveSafePath(shortcutPath);
+    if (!shortcutFullPath) return false;
+
+    const shortcutData = {
+        target: targetPath,
+    };
+
+    try {
+        await fs.writeFile(shortcutFullPath, JSON.stringify(shortcutData, null, 2), 'utf-8');
+        return true;
+    } catch (error) {
+        console.error(`[Filesystem_v2_createShortcut] Error creating shortcut for ${targetPath}:`, error);
+        return false;
+    }
+};
+
+/**
+ * @description Copies a file or folder from a source to a destination.
+ * @param sourcePath The relative path of the item to copy.
+ * @param destinationDir The relative path of the directory to copy into.
+ * @returns True if successful, false otherwise.
+ */
+export const Filesystem_v2_copyItem = async (sourcePath: string, destinationDir: string): Promise<boolean> => {
+    const sourceFullPath = resolveSafePath(sourcePath);
+    if (!sourceFullPath) return false;
+
+    const destinationDirFullPath = resolveSafePath(destinationDir);
+    if (!destinationDirFullPath) return false;
+
+    const destinationPath = path.join(destinationDirFullPath, path.basename(sourceFullPath));
+
+    // Prevent overwriting the source with itself
+    if (destinationPath === sourceFullPath) {
+        return false;
+    }
+
+    try {
+        await fs.cp(sourceFullPath, destinationPath, { recursive: true });
+        return true;
+    } catch (error) {
+        console.error(`[Filesystem_v2_copyItem] Error copying item:`, error);
+        return false;
+    }
+};
+
+/**
+ * @description Gets properties of a file or folder.
+ * @param relativePath The path of the item.
+ * @returns An object with file properties, or null if an error occurs.
+ */
+export const Filesystem_v2_getItemProperties = async (relativePath: string): Promise<any | null> => {
+    const fullPath = resolveSafePath(relativePath);
+    if (!fullPath) return null;
+
+    try {
+        const stats = await fs.stat(fullPath);
+        return {
+            name: path.basename(fullPath),
+            path: relativePath,
+            type: stats.isDirectory() ? 'folder' : 'file',
+            size: stats.size,
+            createdAt: stats.birthtime,
+            modifiedAt: stats.mtime,
+        };
+    } catch (error) {
+        console.error(`[Filesystem_v2_getItemProperties] Error getting properties for ${relativePath}:`, error);
+        return null;
+    }
+};
+
+/**
  * @description Reads and parses a .app file from the filesystem.
  * @param relativePath The path of the .app file.
  * @returns The parsed JSON content of the file, or null if an error occurs.

@@ -12,6 +12,10 @@ const electronAPI = {
     deleteItem: (path: string) => ipcRenderer.invoke('fs:deleteItem', path),
     renameItem: (path: string, newName: string) => ipcRenderer.invoke('fs:renameItem', path, newName),
     readAppFile: (path: string) => ipcRenderer.invoke('fs:readAppFile', path),
+    getItemProperties: (path: string) => ipcRenderer.invoke('fs:getItemProperties', path),
+    copyItem: (sourcePath: string, destinationDir: string) => ipcRenderer.invoke('fs:copyItem', sourcePath, destinationDir),
+    createShortcut: (targetPath: string) => ipcRenderer.invoke('fs:createShortcut', targetPath),
+    readShortcutFile: (path: string) => ipcRenderer.invoke('fs:readShortcutFile', path),
   },
   sftp: {
     connect: (config: any) => ipcRenderer.invoke('sftp:connect', config),

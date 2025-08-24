@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, AppDispatch } from '../../store/store';
 import { openItem } from '../../store/thunks/openItemThunk';
+import { _openInternalApp } from '../../store/slices/windowSlice';
+import { copyItem } from '../../store/slices/clipboardSlice';
 import AppWindow from '../features/AppWindow';
 import Icon, { isValidIcon } from '../features/Icon';
 import ContextMenu, { ContextMenuItem } from '../features/ContextMenu';
@@ -74,7 +76,8 @@ const DesktopItem: React.FC<{
 };
 
 const Desktop: React.FC = () => {
-    const { openApps: serializableApps, activeInstanceId } = useSelector((state: RootState) => state.windows);
+    const { openApps: serializableApps, activeInstanceId, nextZIndex } = useSelector((state: RootState) => state.windows);
+    const { copiedItem } = useSelector((state: RootState) => state.clipboard);
     const [hydratedApps, setHydratedApps] = useState<OpenApp[]>([]);
     const [desktopItems, setDesktopItems] = useState<FilesystemItem[]>([]);
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; targetItem?: FilesystemItem } | null>(null);
@@ -126,22 +129,54 @@ const Desktop: React.FC = () => {
         dispatch(openItem(item));
     };
 
+    const openPropertiesFor = async (item: FilesystemItem) => {
+        const appDef = await getAppDefinitionById('properties');
+        if (!appDef) {
+            console.error("Properties app definition not found.");
+            return;
+        }
+        const instanceId = `${appDef.id}-${item.path}-${Date.now()}`;
+        const newApp = {
+            ...appDef,
+            initialData: { path: item.path },
+            instanceId,
+            title: `Properties: ${item.name}`,
+            isMinimized: false,
+            isMaximized: false,
+            position: { x: 150, y: 150 },
+            size: appDef.defaultSize || { width: 400, height: 350 },
+            zIndex: nextZIndex,
+        };
+        const { component, ...serializablePayload } = newApp;
+        dispatch(_openInternalApp(serializablePayload));
+    };
+
     const generateContextMenuItems = (): ContextMenuItem[] => {
         if (contextMenu?.targetItem) {
             const item = contextMenu.targetItem;
             return [
                 { type: 'item', label: 'Open', onClick: () => handleDoubleClick(item) },
                 { type: 'separator' },
+                { type: 'item', label: 'Copy', onClick: () => dispatch(copyItem(item)) },
+                { type: 'item', label: 'Create shortcut', onClick: async () => { if (await window.electronAPI.filesystem.createShortcut(item.path)) fetchDesktopItems(); } },
+                { type: 'separator' },
                 { type: 'item', label: 'Delete', onClick: async () => { if (await window.electronAPI.filesystem.deleteItem(item.path)) fetchDesktopItems(); } },
                 { type: 'item', label: 'Rename', onClick: () => setRenamingItem({ path: item.path, value: item.name }) },
+                { type: 'separator' },
+                { type: 'item', label: 'Properties', onClick: () => openPropertiesFor(item) },
             ];
         }
+        // When right-clicking the desktop background
+        const desktopItem = { name: 'Desktop', path: '/Desktop', type: 'folder' as const };
         return [
+            { type: 'item', label: 'Paste', onClick: async () => { if(copiedItem) { if (await window.electronAPI.filesystem.copyItem(copiedItem.path, '/Desktop')) fetchDesktopItems(); } }, disabled: !copiedItem },
+            { type: 'separator' },
             { type: 'item', label: 'New Folder', onClick: async () => { let n = 'New Folder', i = 0; while (desktopItems.some(item => item.name === n)) n = `New Folder (${++i})`; if (await window.electronAPI.filesystem.createFolder('/Desktop', n)) fetchDesktopItems(); } },
             { type: 'item', label: 'New Text File', onClick: async () => { let n = 'New Text File.txt', i = 0; while (desktopItems.some(item => item.name === n)) n = `New Text File (${++i}).txt`; if (await window.electronAPI.filesystem.createFile('/Desktop', n)) fetchDesktopItems(); } },
             { type: 'separator' },
             { type: 'item', label: 'Refresh', onClick: fetchDesktopItems },
-            { type: 'item', label: 'Properties', onClick: () => {}, disabled: true },
+            { type: 'separator' },
+            { type: 'item', label: 'Properties', onClick: () => openPropertiesFor(desktopItem) },
         ];
     };
 

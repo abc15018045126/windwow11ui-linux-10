@@ -10,4 +10,8 @@ export {
     Filesystem_v2_deleteItem,
     Filesystem_v2_renameItem,
     Filesystem_v2_readAppFile,
+    Filesystem_v2_getItemProperties,
+    Filesystem_v2_copyItem,
+    Filesystem_v2_createShortcut,
+    Filesystem_v2_readShortcutFile,
 } from '../../function/stable/filesystem/Filesystem_v2_main';

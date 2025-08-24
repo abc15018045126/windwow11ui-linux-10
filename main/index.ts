@@ -13,6 +13,10 @@ import {
   Filesystem_v2_deleteItem,
   Filesystem_v2_renameItem,
   Filesystem_v2_readAppFile,
+  Filesystem_v2_getItemProperties,
+  Filesystem_v2_copyItem,
+  Filesystem_v2_createShortcut,
+  Filesystem_v2_readShortcutFile,
 } from '../services/api/filesystem_v2'
 
 // The built directory structure
@@ -153,6 +157,18 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('fs:readAppFile', (_event, path: string) => {
     return Filesystem_v2_readAppFile(path)
+  })
+  ipcMain.handle('fs:getItemProperties', (_event, path: string) => {
+    return Filesystem_v2_getItemProperties(path)
+  })
+  ipcMain.handle('fs:copyItem', (_event, sourcePath: string, destinationDir: string) => {
+    return Filesystem_v2_copyItem(sourcePath, destinationDir)
+  })
+  ipcMain.handle('fs:createShortcut', (_event, targetPath: string) => {
+    return Filesystem_v2_createShortcut(targetPath)
+  })
+  ipcMain.handle('fs:readShortcutFile', (_event, path: string) => {
+    return Filesystem_v2_readShortcutFile(path)
   })
 
   // Register IPC handler for launching external apps
