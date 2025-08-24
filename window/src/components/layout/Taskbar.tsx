@@ -6,6 +6,7 @@ import { _openInternalApp, focusApp, toggleMinimizeApp } from '../../store/slice
 import { getAppDefinitions, getAppDefinitionById } from '../../apps';
 import Icon from '../features/Icon';
 import { AppDefinition, OpenApp } from '../../types';
+import ContextMenu, { ContextMenuItem } from '../features/ContextMenu';
 
 const TASKBAR_HEIGHT = 48;
 
@@ -20,6 +21,7 @@ const Taskbar: React.FC = () => {
     const { pinnedApps } = useSelector((state: RootState) => state.ui);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [allApps, setAllApps] = useState<AppDefinition[]>([]);
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
     useEffect(() => {
         const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -88,10 +90,26 @@ const Taskbar: React.FC = () => {
         }
     };
 
+    const closeContextMenu = () => setContextMenu(null);
+
+    const handleContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenu({ x: e.clientX, y: e.clientY });
+    };
+
+    const generateContextMenuItems = (): ContextMenuItem[] => {
+        return [
+            { type: 'item', label: 'Taskbar settings', onClick: () => { console.log("Taskbar settings clicked") }, disabled: true },
+        ];
+    };
+
     return (
         <div
             className="fixed bottom-0 left-0 right-0 bg-gray-800 bg-opacity-80 backdrop-blur-md text-white flex items-center justify-between px-4"
             style={{ height: `${TASKBAR_HEIGHT}px` }}
+            onContextMenu={handleContextMenu}
+            onClick={closeContextMenu}
         >
             <div className="flex-1 flex justify-center items-center h-full">
                 <div className="flex items-center space-x-2 h-full">
@@ -124,6 +142,10 @@ const Taskbar: React.FC = () => {
                 <div>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                 <div>{currentTime.toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
             </div>
+
+            {contextMenu && (
+                <ContextMenu x={contextMenu.x} y={contextMenu.y} items={generateContextMenuItems()} onClose={closeContextMenu} />
+            )}
         </div>
     );
 };
