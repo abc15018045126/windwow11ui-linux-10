@@ -12,7 +12,7 @@ const LauncherComponent: React.FC<AppComponentProps> = () => {
 export const appDefinition: AppDefinition = {
   "id": "hellow",
   "name": "Hellow",
-  "icon": "hellow",
+  "icon": "chrome",
   "isExternal": true,
   "externalPath": "apps\\hellow\\main.js",
   "component": null

@@ -12,7 +12,7 @@ const LauncherComponent: React.FC<AppComponentProps> = () => {
 export const appDefinition: AppDefinition = {
   "id": "simple-node-app",
   "name": "Simple-node-app",
-  "icon": "simple-node-app",
+  "icon": "chrome",
   "isExternal": true,
   "externalPath": "apps\\simple-node-app\\main.js",
   "component": null
