@@ -1,5 +1,5 @@
 {
   "appId": "hellow",
   "name": "Hellow",
-  "icon": "hellow"
+  "icon": "chrome"
 }
