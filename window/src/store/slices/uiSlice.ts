@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface UIState {
   isStartMenuOpen: boolean;
@@ -17,9 +17,17 @@ const uiSlice = createSlice({
     toggleStartMenu: (state) => {
       state.isStartMenuOpen = !state.isStartMenuOpen;
     },
+    pinApp: (state, action: PayloadAction<string>) => {
+        if (!state.pinnedApps.includes(action.payload)) {
+            state.pinnedApps.push(action.payload);
+        }
+    },
+    unpinApp: (state, action: PayloadAction<string>) => {
+        state.pinnedApps = state.pinnedApps.filter(id => id !== action.payload);
+    },
   },
 });
 
-export const { toggleStartMenu } = uiSlice.actions;
+export const { toggleStartMenu, pinApp, unpinApp } = uiSlice.actions;
 
 export default uiSlice.reducer;
