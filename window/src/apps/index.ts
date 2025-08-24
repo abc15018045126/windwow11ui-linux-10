@@ -41,6 +41,11 @@ export const getAppDefinitionById = async (id: string): Promise<AppDefinition | 
     return apps.find(app => app.id === id);
 }
 
+/**
+ * Finds all registered applications that can handle a given file extension.
+ * @param extension The file extension to search for (e.g., '.txt').
+ * @returns A promise that resolves to an array of AppDefinitions.
+ */
 export const getAppsForExtension = async (extension: string): Promise<AppDefinition[]> => {
     if (!extension) return [];
     const apps = await getAppDefinitions();
