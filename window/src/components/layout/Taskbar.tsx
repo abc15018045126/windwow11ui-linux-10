@@ -24,10 +24,6 @@ const Taskbar: React.FC = () => {
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number; targetApp?: TaskbarApp } | null>(null);
 
     useEffect(() => {
-        console.log('[DEBUG] contextMenu state changed:', contextMenu);
-    }, [contextMenu]);
-
-    useEffect(() => {
         const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timerId);
     }, []);
@@ -138,7 +134,7 @@ const Taskbar: React.FC = () => {
 
         // Default taskbar menu
         return [
-            { type: 'item', label: 'Taskbar settings', onClick: () => { console.log("Taskbar settings clicked") }, disabled: true },
+            { type: 'item', label: 'Taskbar settings', onClick: () => {}, disabled: true },
         ];
     };
 
@@ -182,10 +178,9 @@ const Taskbar: React.FC = () => {
                 <div>{currentTime.toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
             </div>
 
-            {contextMenu && (() => {
-                console.log('[DEBUG] Rendering ContextMenu with items:', generateContextMenuItems());
-                return <ContextMenu x={contextMenu.x} y={contextMenu.y} items={generateContextMenuItems()} onClose={closeContextMenu} />
-            })()}
+            {contextMenu && (
+                <ContextMenu x={contextMenu.x} y={contextMenu.y} items={generateContextMenuItems()} onClose={closeContextMenu} />
+            )}
         </div>
     );
 };
