@@ -157,7 +157,13 @@ const Taskbar: React.FC = () => {
                             <button
                                 key={buttonKey}
                                 onClick={() => handleAppIconClick(app)}
-                                onContextMenu={(e) => handleContextMenu(e, app)}
+                                onMouseDown={(e) => {
+                                    if (e.button === 2) {
+                                        console.log(`[DEBUG] Right mouse down on app: ${app.name}`);
+                                        handleContextMenu(e, app);
+                                    }
+                                }}
+                                onContextMenu={(e) => e.preventDefault()} // Prevent native menu
                                 className={`p-2 rounded h-[calc(100%-8px)] flex items-center relative transition-colors duration-150 ease-in-out ${app.isActive ? 'bg-white/20' : 'hover:bg-white/10'}`}
                                 title={app.name}
                             >
