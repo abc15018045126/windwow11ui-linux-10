@@ -1,19 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { AppDefinition, AppComponentProps } from '../../types';
+import { AppDefinition, AppComponentProps, FilesystemItem } from '../../types';
 import { openItem as openItemThunk } from '../../store/thunks/openItemThunk';
 import { _openInternalApp } from '../../store/slices/windowSlice';
-import { getAppDefinitionById } from '../../apps';
+import { getAppDefinitionById, getAppsForExtension } from '../../apps';
 import { AppDispatch, RootState } from '../../store/store';
 import { copyItem } from '../../store/slices/clipboardSlice';
 import Icon from '../../components/features/Icon';
 import ContextMenu, { ContextMenuItem } from '../../components/features/ContextMenu';
-
-interface FilesystemItem {
-    name: string;
-    path: string;
-    type: 'file' | 'folder';
-}
 
 const getFileIconName = (filename: string): string => {
     if (filename.endsWith('.txt') || filename.endsWith('.md')) return 'notebook';
@@ -30,7 +24,7 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
     const [historyIndex, setHistoryIndex] = useState(0);
     const [items, setItems] = useState<FilesystemItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item?: FilesystemItem } | null>(null);
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
     const [renamingItem, setRenamingItem] = useState<{ path: string, value: string } | null>(null);
 
     const fetchItems = useCallback(async () => {
@@ -81,11 +75,6 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
         }
     };
 
-    const handleContextMenu = (e: React.MouseEvent, item?: FilesystemItem) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setContextMenu({ x: e.clientX, y: e.clientY, item: item });
-    };
 
     const closeContextMenu = () => setContextMenu(null);
 
@@ -119,11 +108,27 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
         dispatch(_openInternalApp(serializablePayload));
     };
 
-    const generateContextMenuItems = (): ContextMenuItem[] => {
-        if (contextMenu?.item) {
-            const item = contextMenu.item;
-            return [
+    const handleContextMenu = async (e: React.MouseEvent, item?: FilesystemItem) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeContextMenu();
+
+        let menuItems: ContextMenuItem[] = [];
+
+        if (item) { // Right-clicked on an item
+            const openWithApps = item.type === 'file'
+                ? await getAppsForExtension(item.name.split('.').pop() || '')
+                : [];
+
+            const openWithSubMenu: ContextMenuItem[] = openWithApps.map(app => ({
+                type: 'item',
+                label: app.name,
+                onClick: () => dispatch(openItemThunk({ ...item, openWithAppId: app.id })),
+            }));
+
+            menuItems = [
                 { type: 'item', label: 'Open', onClick: () => openItem(item) },
+                { type: 'item', label: 'Open with', onClick: () => {}, disabled: openWithSubMenu.length === 0, items: openWithSubMenu },
                 { type: 'separator' },
                 { type: 'item', label: 'Copy', onClick: () => dispatch(copyItem(item)) },
                 { type: 'item', label: 'Create shortcut', onClick: async () => { if (await window.electronAPI.filesystem.createShortcut(item.path)) fetchItems(); } },
@@ -133,19 +138,20 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
                 { type: 'separator' },
                 { type: 'item', label: 'Properties', onClick: () => openPropertiesFor(item) },
             ];
+        } else { // Right-clicked on the background
+            const currentFolderItem = { name: currentPath.split('/').pop() || 'Folder', path: currentPath, type: 'folder' as const };
+            menuItems = [
+                { type: 'item', label: 'Paste', onClick: async () => { if (copiedItem) { if (await window.electronAPI.filesystem.copyItem(copiedItem.path, currentPath)) fetchItems(); } }, disabled: !copiedItem },
+                { type: 'separator' },
+                { type: 'item', label: 'New Folder', onClick: async () => { let n = 'New Folder', i = 0; while (items.some(item => item.name === n)) n = `New Folder (${++i})`; if (await window.electronAPI.filesystem.createFolder(currentPath, n)) fetchItems(); } },
+                { type: 'item', label: 'New Text File', onClick: async () => { let n = 'New Text File.txt', i = 0; while (items.some(item => item.name === n)) n = `New Text File (${++i}).txt`; if (await window.electronAPI.filesystem.createFile(currentPath, n)) fetchItems(); } },
+                { type: 'separator' },
+                { type: 'item', label: 'Refresh', onClick: fetchItems },
+                { type: 'separator' },
+                { type: 'item', label: 'Properties', onClick: () => openPropertiesFor(currentFolderItem) },
+            ];
         }
-        // When right-clicking the background
-        const currentFolderItem = { name: currentPath.split('/').pop() || 'Folder', path: currentPath, type: 'folder' as const };
-        return [
-            { type: 'item', label: 'Paste', onClick: async () => { if (copiedItem) { if (await window.electronAPI.filesystem.copyItem(copiedItem.path, currentPath)) fetchItems(); } }, disabled: !copiedItem },
-            { type: 'separator' },
-            { type: 'item', label: 'New Folder', onClick: async () => { let n = 'New Folder', i = 0; while (items.some(item => item.name === n)) n = `New Folder (${++i})`; if (await window.electronAPI.filesystem.createFolder(currentPath, n)) fetchItems(); } },
-            { type: 'item', label: 'New Text File', onClick: async () => { let n = 'New Text File.txt', i = 0; while (items.some(item => item.name === n)) n = `New Text File (${++i}).txt`; if (await window.electronAPI.filesystem.createFile(currentPath, n)) fetchItems(); } },
-            { type: 'separator' },
-            { type: 'item', label: 'Refresh', onClick: fetchItems },
-            { type: 'separator' },
-            { type: 'item', label: 'Properties', onClick: () => openPropertiesFor(currentFolderItem) },
-        ];
+        setContextMenu({ x: e.clientX, y: e.clientY, items: menuItems });
     };
 
     const breadcrumbParts = currentPath === '/' ? [] : currentPath.substring(1).split('/');
@@ -238,7 +244,7 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
             </div>
 
             {contextMenu && (
-                <ContextMenu x={contextMenu.x} y={contextMenu.y} items={generateContextMenuItems()} onClose={closeContextMenu} />
+                <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenu.items} onClose={closeContextMenu} />
             )}
         </div>
     );

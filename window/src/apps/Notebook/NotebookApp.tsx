@@ -336,7 +336,7 @@ export const appDefinition: AppDefinition = {
   icon: 'notebook',
   component: NotebookApp,
   defaultSize: {width: 600, height: 500},
-  fileExtensions: ['.txt', '.log'],
+  fileExtensions: ['.txt', '.log', '.md'],
   allowMultipleInstances: true,
 };
 

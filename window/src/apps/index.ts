@@ -40,3 +40,9 @@ export const getAppDefinitionById = async (id: string): Promise<AppDefinition | 
     const apps = await getAppDefinitions();
     return apps.find(app => app.id === id);
 }
+
+export const getAppsForExtension = async (extension: string): Promise<AppDefinition[]> => {
+    if (!extension) return [];
+    const apps = await getAppDefinitions();
+    return apps.filter(app => app.fileExtensions?.includes(extension.toLowerCase()));
+}

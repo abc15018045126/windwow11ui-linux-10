@@ -43,3 +43,10 @@ export interface OpenApp extends AppDefinition {
     previousPosition?: { x: number; y: number };
     previousSize?: { width: number; height: number };
 }
+
+// Represents an item on the filesystem, used by File Explorer, Desktop, etc.
+export interface FilesystemItem {
+    name: string;
+    path: string;
+    type: 'file' | 'folder';
+}

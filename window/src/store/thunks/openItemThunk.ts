@@ -1,20 +1,29 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 import { _openInternalApp } from '../slices/windowSlice';
 import { getAppDefinitionById } from '../../apps';
-import { AppDefinition } from '../../types';
+import { AppDefinition, FilesystemItem } from '../../types';
 import { RootState } from '../store';
 
-interface FilesystemItem {
-    name: string;
-    path: string;
-    type: 'file' | 'folder';
+interface OpenItemPayload extends FilesystemItem {
+    openWithAppId?: string;
 }
 
 export const openItem = createAsyncThunk(
     'windows/openItem',
-    async (item: FilesystemItem, { dispatch, getState }) => {
+    async (payload: OpenItemPayload, { dispatch, getState }) => {
+        const { openWithAppId, ...item } = payload;
         const state = getState() as RootState;
         const nextZIndex = state.windows.nextZIndex;
+
+        if (openWithAppId) {
+            const appDef = await getAppDefinitionById(openWithAppId);
+            if (appDef) {
+                openAppWithDef(appDef, { filePath: item.path });
+            } else {
+                console.error(`App definition not found for id: ${openWithAppId}`);
+            }
+            return;
+        }
 
         if (item.name.endsWith('.shortcut')) {
             const targetPath = await window.electronAPI.filesystem.readShortcutFile(item.path);
@@ -30,27 +39,6 @@ export const openItem = createAsyncThunk(
             dispatch(openItem(targetProperties));
             return;
         }
-
-        const openAppWithDef = (appDef: AppDefinition, initialData?: object) => {
-            if (appDef.isExternal && appDef.externalPath) {
-                window.electronAPI.launcher.launchExternal(appDef.externalPath);
-            } else {
-                const instanceId = `${appDef.id}-${Date.now()}`;
-                const newApp = {
-                    ...appDef,
-                    ...(initialData && { initialData }),
-                    instanceId,
-                    title: appDef.name,
-                    isMinimized: false,
-                    isMaximized: false,
-                    position: { x: 50, y: 50 },
-                    size: appDef.defaultSize || { width: 600, height: 400 },
-                    zIndex: nextZIndex,
-                };
-                const { component, ...serializablePayload } = newApp;
-                dispatch(_openInternalApp(serializablePayload));
-            }
-        };
 
         if (item.type === 'folder') {
             const appDef = await getAppDefinitionById('fileExplorer');

@@ -7,14 +7,8 @@ import { copyItem } from '../../store/slices/clipboardSlice';
 import AppWindow from '../features/AppWindow';
 import Icon, { isValidIcon } from '../features/Icon';
 import ContextMenu, { ContextMenuItem } from '../features/ContextMenu';
-import { getAppDefinitionById } from '../../apps';
-import { OpenApp } from '../../types';
-
-interface FilesystemItem {
-    name: string;
-    path: string;
-    type: 'file' | 'folder';
-}
+import { getAppDefinitionById, getAppsForExtension } from '../../apps';
+import { OpenApp, FilesystemItem } from '../../types';
 
 const DesktopItem: React.FC<{
     item: FilesystemItem,
@@ -80,7 +74,7 @@ const Desktop: React.FC = () => {
     const { copiedItem } = useSelector((state: RootState) => state.clipboard);
     const [hydratedApps, setHydratedApps] = useState<OpenApp[]>([]);
     const [desktopItems, setDesktopItems] = useState<FilesystemItem[]>([]);
-    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; targetItem?: FilesystemItem } | null>(null);
+    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: ContextMenuItem[] } | null>(null);
     const [renamingItem, setRenamingItem] = useState<{ path: string, value: string } | null>(null);
     const desktopRef = useRef<HTMLDivElement>(null);
     const dispatch = useDispatch<AppDispatch>();
@@ -110,12 +104,6 @@ const Desktop: React.FC = () => {
     useEffect(() => { fetchDesktopItems(); }, [fetchDesktopItems]);
 
     const closeContextMenu = () => setContextMenu(null);
-
-    const handleContextMenu = (e: React.MouseEvent, item?: FilesystemItem) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setContextMenu({ x: e.clientX, y: e.clientY, targetItem: item });
-    };
 
     const handleRenameSubmit = async () => {
         if (!renamingItem) return;
@@ -151,11 +139,27 @@ const Desktop: React.FC = () => {
         dispatch(_openInternalApp(serializablePayload));
     };
 
-    const generateContextMenuItems = (): ContextMenuItem[] => {
-        if (contextMenu?.targetItem) {
-            const item = contextMenu.targetItem;
-            return [
+    const handleContextMenu = async (e: React.MouseEvent, item?: FilesystemItem) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeContextMenu(); // Close any existing menu
+
+        let menuItems: ContextMenuItem[] = [];
+
+        if (item) { // Right-clicked on an item
+            const openWithApps = item.type === 'file'
+                ? await getAppsForExtension(item.name.split('.').pop() || '')
+                : [];
+
+            const openWithSubMenu: ContextMenuItem[] = openWithApps.map(app => ({
+                type: 'item',
+                label: app.name,
+                onClick: () => dispatch(openItem({ ...item, openWithAppId: app.id })),
+            }));
+
+            menuItems = [
                 { type: 'item', label: 'Open', onClick: () => handleDoubleClick(item) },
+                { type: 'item', label: 'Open with', onClick: () => {}, disabled: openWithSubMenu.length === 0, items: openWithSubMenu },
                 { type: 'separator' },
                 { type: 'item', label: 'Copy', onClick: () => dispatch(copyItem(item)) },
                 { type: 'item', label: 'Create shortcut', onClick: async () => { if (await window.electronAPI.filesystem.createShortcut(item.path)) fetchDesktopItems(); } },
@@ -165,19 +169,21 @@ const Desktop: React.FC = () => {
                 { type: 'separator' },
                 { type: 'item', label: 'Properties', onClick: () => openPropertiesFor(item) },
             ];
+        } else { // Right-clicked on the desktop background
+            const desktopItem = { name: 'Desktop', path: '/Desktop', type: 'folder' as const };
+            menuItems = [
+                { type: 'item', label: 'Paste', onClick: async () => { if(copiedItem) { if (await window.electronAPI.filesystem.copyItem(copiedItem.path, '/Desktop')) fetchDesktopItems(); } }, disabled: !copiedItem },
+                { type: 'separator' },
+                { type: 'item', label: 'New Folder', onClick: async () => { let n = 'New Folder', i = 0; while (desktopItems.some(item => item.name === n)) n = `New Folder (${++i})`; if (await window.electronAPI.filesystem.createFolder('/Desktop', n)) fetchDesktopItems(); } },
+                { type: 'item', label: 'New Text File', onClick: async () => { let n = 'New Text File.txt', i = 0; while (desktopItems.some(item => item.name === n)) n = `New Text File (${++i}).txt`; if (await window.electronAPI.filesystem.createFile('/Desktop', n)) fetchDesktopItems(); } },
+                { type: 'separator' },
+                { type: 'item', label: 'Refresh', onClick: fetchDesktopItems },
+                { type: 'separator' },
+                { type: 'item', label: 'Properties', onClick: () => openPropertiesFor(desktopItem) },
+            ];
         }
-        // When right-clicking the desktop background
-        const desktopItem = { name: 'Desktop', path: '/Desktop', type: 'folder' as const };
-        return [
-            { type: 'item', label: 'Paste', onClick: async () => { if(copiedItem) { if (await window.electronAPI.filesystem.copyItem(copiedItem.path, '/Desktop')) fetchDesktopItems(); } }, disabled: !copiedItem },
-            { type: 'separator' },
-            { type: 'item', label: 'New Folder', onClick: async () => { let n = 'New Folder', i = 0; while (desktopItems.some(item => item.name === n)) n = `New Folder (${++i})`; if (await window.electronAPI.filesystem.createFolder('/Desktop', n)) fetchDesktopItems(); } },
-            { type: 'item', label: 'New Text File', onClick: async () => { let n = 'New Text File.txt', i = 0; while (desktopItems.some(item => item.name === n)) n = `New Text File (${++i}).txt`; if (await window.electronAPI.filesystem.createFile('/Desktop', n)) fetchDesktopItems(); } },
-            { type: 'separator' },
-            { type: 'item', label: 'Refresh', onClick: fetchDesktopItems },
-            { type: 'separator' },
-            { type: 'item', label: 'Properties', onClick: () => openPropertiesFor(desktopItem) },
-        ];
+
+        setContextMenu({ x: e.clientX, y: e.clientY, items: menuItems });
     };
 
     return (
@@ -207,7 +213,7 @@ const Desktop: React.FC = () => {
             ))}
 
             {contextMenu && (
-                <ContextMenu x={contextMenu.x} y={contextMenu.y} items={generateContextMenuItems()} onClose={closeContextMenu} />
+                <ContextMenu x={contextMenu.x} y={contextMenu.y} items={contextMenu.items} onClose={closeContextMenu} />
             )}
         </div>
     );
