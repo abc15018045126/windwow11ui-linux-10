@@ -100,6 +100,8 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
                 { type: 'separator' },
                 { type: 'item', label: 'Delete', onClick: async () => { if (await window.electronAPI.filesystem.deleteItem(item.path)) fetchItems(); } },
                 { type: 'item', label: 'Rename', onClick: () => setRenamingItem({ path: item.path, value: item.name }) },
+                { type: 'separator' },
+                { type: 'item', label: 'Properties', onClick: () => {}, disabled: true },
             ];
         }
         return [

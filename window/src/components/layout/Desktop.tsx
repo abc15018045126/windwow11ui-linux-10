@@ -141,6 +141,7 @@ const Desktop: React.FC = () => {
             { type: 'item', label: 'New Text File', onClick: async () => { let n = 'New Text File.txt', i = 0; while (desktopItems.some(item => item.name === n)) n = `New Text File (${++i}).txt`; if (await window.electronAPI.filesystem.createFile('/Desktop', n)) fetchDesktopItems(); } },
             { type: 'separator' },
             { type: 'item', label: 'Refresh', onClick: fetchDesktopItems },
+            { type: 'item', label: 'Properties', onClick: () => {}, disabled: true },
         ];
     };
 
