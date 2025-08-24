@@ -10,7 +10,11 @@ const PROJECT_ROOT = process.cwd();
  * @returns The resolved, absolute path if it's safe, or null otherwise.
  */
 const resolveSafePath = (relativePath: string): string | null => {
-    const fullPath = path.resolve(PROJECT_ROOT, relativePath);
+    // First, join the path to handle relative paths correctly.
+    // Then, resolve the path to canonicalize it (e.g., remove '..').
+    const fullPath = path.resolve(path.join(PROJECT_ROOT, relativePath));
+
+    // Finally, check if the canonicalized path is still within the project root.
     if (!fullPath.startsWith(PROJECT_ROOT)) {
         console.error(`[Security] Path traversal attempt blocked: ${relativePath}`);
         return null;
