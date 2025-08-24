@@ -143,7 +143,7 @@ const Taskbar: React.FC = () => {
         <div
             className="fixed bottom-0 left-0 right-0 bg-gray-800 bg-opacity-80 backdrop-blur-md text-white flex items-center justify-between px-4"
             style={{ height: `${TASKBAR_HEIGHT}px` }}
-            onContextMenu={handleContextMenu}
+            onContextMenu={(e) => handleContextMenu(e)}
             onClick={closeContextMenu}
         >
             <div className="flex-1 flex justify-center items-center h-full">
