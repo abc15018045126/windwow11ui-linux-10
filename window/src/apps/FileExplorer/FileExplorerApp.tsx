@@ -19,7 +19,7 @@ const getFileIconName = (filename: string): string => {
 
 const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData }) => {
     const dispatch = useDispatch<AppDispatch>();
-    const startPath = initialData?.initialPath || '/Desktop';
+    const startPath = initialData?.initialPath || '/';
     const [currentPath, setCurrentPath] = useState(startPath);
     const [history, setHistory] = useState([startPath]);
     const [historyIndex, setHistoryIndex] = useState(0);
@@ -62,8 +62,8 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
     };
 
     const goUp = () => {
-        if (currentPath !== '/Desktop') {
-            const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/Desktop';
+        if (currentPath !== '/') {
+            const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
             navigateTo(parentPath);
         }
     };
@@ -110,72 +110,95 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
         ];
     };
 
-    const breadcrumbParts = currentPath.substring('/Desktop'.length).split('/').filter(p => p);
+    const breadcrumbParts = currentPath === '/' ? [] : currentPath.substring(1).split('/');
 
     const handleBreadcrumbClick = (index: number) => {
-        const newPath = '/Desktop' + (index > 0 ? '/' + breadcrumbParts.slice(0, index).join('/') : '');
+        const newPath = '/' + breadcrumbParts.slice(0, index + 1).join('/');
         navigateTo(newPath);
     };
+
+    const shortcuts = [
+        { name: 'Home', path: '/', icon: 'fileExplorer' },
+        { name: 'Apps', path: '/apps', icon: 'folder' },
+        { name: 'Services', path: '/services', icon: 'folder' },
+        { name: 'Window', path: '/window', icon: 'folder' },
+    ];
 
     return (
         <div className="flex h-full bg-zinc-900 text-white select-none flex-col" onClick={() => { closeContextMenu(); if (renamingItem) handleRenameSubmit(); }}>
             {/* Toolbar */}
             <div className="flex-shrink-0 flex items-center space-x-1 p-2 border-b border-zinc-700 bg-zinc-800">
-                {/* Navigation Buttons */}
                 <button onClick={goBack} disabled={historyIndex === 0} className="p-1.5 rounded hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                 </button>
-                <button onClick={goUp} disabled={currentPath === '/Desktop'} className="p-1.5 rounded hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                <button onClick={goUp} disabled={currentPath === '/'} className="p-1.5 rounded hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
                 </button>
 
-                {/* Breadcrumb / Address Bar */}
                 <div className="flex items-center bg-zinc-900 rounded p-1 text-sm flex-grow border border-zinc-700">
-                    <Icon iconName="desktop" className="w-4 h-4 mx-1" />
-                    <button onClick={() => navigateTo('/Desktop')} className="hover:underline">Desktop</button>
-                    {breadcrumbParts.length > 0 && <span className="mx-1 text-zinc-500">/</span>}
+                    <Icon iconName="fileExplorer" className="w-4 h-4 mx-1" />
+                    <button onClick={() => navigateTo('/')} className="hover:underline">Home</button>
                     {breadcrumbParts.map((part, index) => (
                         <React.Fragment key={index}>
-                            <button onClick={() => handleBreadcrumbClick(index + 1)} className="hover:underline">{part}</button>
-                            {index < breadcrumbParts.length - 1 && <span className="mx-1 text-zinc-500">/</span>}
+                            <span className="mx-1 text-zinc-500">/</span>
+                            <button onClick={() => handleBreadcrumbClick(index)} className="hover:underline">{part}</button>
                         </React.Fragment>
                     ))}
                 </div>
 
-                 {/* Refresh Button */}
                  <button onClick={fetchItems} className="p-1.5 rounded hover:bg-zinc-700">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 4l1.5 1.5A9 9 0 0120.5 15M20 20l-1.5-1.5A9 9 0 003.5 9" /></svg>
                 </button>
             </div>
-            {/* Main content */}
-            <main className="flex-grow flex flex-col">
-                <div className="flex-grow p-4 overflow-y-auto" onContextMenu={handleContextMenu}>
-                    {isLoading ? <p>Loading...</p> : (
-                        <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-4">
-                            {items.map(item => (
-                                <div key={item.path} onContextMenu={(e) => handleContextMenu(e, item)} onDoubleClick={() => openItem(item)} className="flex flex-col items-center p-2 rounded hover:bg-white/10 text-center">
-                                    <Icon iconName={item.type === 'folder' ? 'folder' : getFileIconName(item.name)} className="w-12 h-12" />
-                                    {renamingItem?.path === item.path ? (
-                                        <input
-                                            type="text"
-                                            value={renamingItem.value}
-                                            onChange={(e) => setRenamingItem({ ...renamingItem, value: e.target.value })}
-                                            onBlur={handleRenameSubmit}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') handleRenameSubmit(); }}
-                                            className="text-xs text-center text-black bg-white w-full border border-blue-500 mt-1.5"
-                                            autoFocus
-                                            onFocus={e => e.target.select()}
-                                            onClick={e => e.stopPropagation()}
-                                        />
-                                    ) : (
-                                        <span className="text-xs mt-1.5 break-words w-full truncate">{item.name}</span>
-                                    )}
-                                </div>
+
+            <div className="flex flex-grow overflow-hidden">
+                {/* Left Navigation Pane */}
+                <aside className="w-48 bg-zinc-800/50 p-2 flex-shrink-0 overflow-y-auto">
+                    <nav>
+                        <ul>
+                            {shortcuts.map(shortcut => (
+                                <li key={shortcut.name}>
+                                    <button onClick={() => navigateTo(shortcut.path)} className={`w-full text-left flex items-center p-2 rounded my-1 ${currentPath === shortcut.path ? 'bg-blue-600' : 'hover:bg-zinc-700'}`}>
+                                        <Icon iconName={shortcut.icon} className="w-5 h-5 mr-2" />
+                                        <span>{shortcut.name}</span>
+                                    </button>
+                                </li>
                             ))}
-                        </div>
-                    )}
-                </div>
-            </main>
+                        </ul>
+                    </nav>
+                </aside>
+
+                {/* Main Content */}
+                <main className="flex-grow flex flex-col">
+                    <div className="flex-grow p-4 overflow-y-auto" onContextMenu={handleContextMenu}>
+                        {isLoading ? <p>Loading...</p> : (
+                            <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-4">
+                                {items.map(item => (
+                                    <div key={item.path} onContextMenu={(e) => handleContextMenu(e, item)} onDoubleClick={() => openItem(item)} className="flex flex-col items-center p-2 rounded hover:bg-white/10 text-center">
+                                        <Icon iconName={item.type === 'folder' ? 'folder' : getFileIconName(item.name)} className="w-12 h-12" />
+                                        {renamingItem?.path === item.path ? (
+                                            <input
+                                                type="text"
+                                                value={renamingItem.value}
+                                                onChange={(e) => setRenamingItem({ ...renamingItem, value: e.target.value })}
+                                                onBlur={handleRenameSubmit}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') handleRenameSubmit(); }}
+                                                className="text-xs text-center text-black bg-white w-full border border-blue-500 mt-1.5"
+                                                autoFocus
+                                                onFocus={e => e.target.select()}
+                                                onClick={e => e.stopPropagation()}
+                                            />
+                                        ) : (
+                                            <span className="text-xs mt-1.5 break-words w-full truncate">{item.name}</span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </main>
+            </div>
+
             {contextMenu && (
                 <ContextMenu x={contextMenu.x} y={contextMenu.y} items={generateContextMenuItems()} onClose={closeContextMenu} />
             )}

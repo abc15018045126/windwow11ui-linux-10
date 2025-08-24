@@ -7,13 +7,13 @@ import { SFTP_v1_listDirectory, SFTP_v1_downloadFile } from '../services/api/sft
 import { Launcher_v1_launchExternal } from '../services/api/launcher'
 import { AppStore_v1_discoverAvailableApps, AppStore_v1_installExternalApp } from '../services/api/appStore'
 import {
-  Filesystem_v1_getItemsInPath,
-  Filesystem_v1_createFolder,
-  Filesystem_v1_createFile,
-  Filesystem_v1_deleteItem,
-  Filesystem_v1_renameItem,
-  Filesystem_v1_readAppFile,
-} from '../services/api/filesystem'
+  Filesystem_v2_getItemsInPath,
+  Filesystem_v2_createFolder,
+  Filesystem_v2_createFile,
+  Filesystem_v2_deleteItem,
+  Filesystem_v2_renameItem,
+  Filesystem_v2_readAppFile,
+} from '../services/api/filesystem_v2'
 
 // The built directory structure
 //
@@ -126,12 +126,6 @@ app.whenReady().then(() => {
     return null; // Or return an error object
   });
 
-  // Ensure the virtual filesystem directory exists on startup
-  const virtualFsPath = path.join(process.cwd(), 'virtual-fs', 'Desktop');
-  if (!fs.existsSync(virtualFsPath)) {
-    fs.mkdirSync(virtualFsPath, { recursive: true });
-  }
-
   // Register IPC handlers for our new notebook functions
   ipcMain.handle('notebook:readFile', (_event, filePath: string) => {
     return Notebook_v1_readFile(filePath)
@@ -143,22 +137,22 @@ app.whenReady().then(() => {
 
   // Register IPC handlers for our new filesystem functions
   ipcMain.handle('fs:getItemsInPath', (_event, path: string) => {
-    return Filesystem_v1_getItemsInPath(path)
+    return Filesystem_v2_getItemsInPath(path)
   })
   ipcMain.handle('fs:createFolder', (_event, path: string, folderName: string) => {
-    return Filesystem_v1_createFolder(path, folderName)
+    return Filesystem_v2_createFolder(path, folderName)
   })
   ipcMain.handle('fs:createFile', (_event, path: string, fileName: string) => {
-    return Filesystem_v1_createFile(path, fileName)
+    return Filesystem_v2_createFile(path, fileName)
   })
   ipcMain.handle('fs:deleteItem', (_event, path: string) => {
-    return Filesystem_v1_deleteItem(path)
+    return Filesystem_v2_deleteItem(path)
   })
   ipcMain.handle('fs:renameItem', (_event, path: string, newName: string) => {
-    return Filesystem_v1_renameItem(path, newName)
+    return Filesystem_v2_renameItem(path, newName)
   })
   ipcMain.handle('fs:readAppFile', (_event, path: string) => {
-    return Filesystem_v1_readAppFile(path)
+    return Filesystem_v2_readAppFile(path)
   })
 
   // Register IPC handler for launching external apps
