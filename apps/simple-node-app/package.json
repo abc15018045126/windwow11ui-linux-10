@@ -1,0 +1,8 @@
+{
+  "name": "simple-node-app",
+  "version": "1.0.0",
+  "description": "A simple Node.js app that can be launched by the system.",
+  "main": "index.js",
+  "author": "Jules",
+  "license": "MIT"
+}

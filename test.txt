@@ -1,0 +1,15 @@
+Hello from test.txt!
+
+This is a test file for the Notebook application.
+If you can read this, the file reading functionality is working.
+Try editing this text and saving it!
+
+
+npm install
+npm run build
+npm run dev
+
+
+ npm start 
+
+
