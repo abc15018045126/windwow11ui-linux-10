@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { AppDefinition, AppComponentProps } from '../../types';
 import { openItem as openItemThunk } from '../../store/thunks/openItemThunk';
-import { AppDispatch } from '../../store/store';
+import { _openInternalApp } from '../../store/slices/windowSlice';
+import { getAppDefinitionById } from '../../apps';
+import { AppDispatch, RootState } from '../../store/store';
+import { copyItem } from '../../store/slices/clipboardSlice';
 import Icon from '../../components/features/Icon';
 import ContextMenu, { ContextMenuItem } from '../../components/features/ContextMenu';
 
@@ -19,6 +22,8 @@ const getFileIconName = (filename: string): string => {
 
 const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData }) => {
     const dispatch = useDispatch<AppDispatch>();
+    const { nextZIndex } = useSelector((state: RootState) => state.windows);
+    const { copiedItem } = useSelector((state: RootState) => state.clipboard);
     const startPath = initialData?.initialPath || '/';
     const [currentPath, setCurrentPath] = useState(startPath);
     const [history, setHistory] = useState([startPath]);
@@ -92,23 +97,54 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
         setRenamingItem(null);
     };
 
+    const openPropertiesFor = async (item: FilesystemItem) => {
+        const appDef = await getAppDefinitionById('properties');
+        if (!appDef) {
+            console.error("Properties app definition not found.");
+            return;
+        }
+        const instanceId = `${appDef.id}-${item.path}-${Date.now()}`;
+        const newApp = {
+            ...appDef,
+            initialData: { path: item.path },
+            instanceId,
+            title: `Properties: ${item.name}`,
+            isMinimized: false,
+            isMaximized: false,
+            position: { x: 150, y: 150 },
+            size: appDef.defaultSize || { width: 400, height: 350 },
+            zIndex: nextZIndex,
+        };
+        const { component, ...serializablePayload } = newApp;
+        dispatch(_openInternalApp(serializablePayload));
+    };
+
     const generateContextMenuItems = (): ContextMenuItem[] => {
         if (contextMenu?.item) {
             const item = contextMenu.item;
             return [
                 { type: 'item', label: 'Open', onClick: () => openItem(item) },
                 { type: 'separator' },
+                { type: 'item', label: 'Copy', onClick: () => dispatch(copyItem(item)) },
+                { type: 'item', label: 'Create shortcut', onClick: async () => { if (await window.electronAPI.filesystem.createShortcut(item.path)) fetchItems(); } },
+                { type: 'separator' },
                 { type: 'item', label: 'Delete', onClick: async () => { if (await window.electronAPI.filesystem.deleteItem(item.path)) fetchItems(); } },
                 { type: 'item', label: 'Rename', onClick: () => setRenamingItem({ path: item.path, value: item.name }) },
                 { type: 'separator' },
-                { type: 'item', label: 'Properties', onClick: () => {}, disabled: true },
+                { type: 'item', label: 'Properties', onClick: () => openPropertiesFor(item) },
             ];
         }
+        // When right-clicking the background
+        const currentFolderItem = { name: currentPath.split('/').pop() || 'Folder', path: currentPath, type: 'folder' as const };
         return [
+            { type: 'item', label: 'Paste', onClick: async () => { if (copiedItem) { if (await window.electronAPI.filesystem.copyItem(copiedItem.path, currentPath)) fetchItems(); } }, disabled: !copiedItem },
+            { type: 'separator' },
             { type: 'item', label: 'New Folder', onClick: async () => { let n = 'New Folder', i = 0; while (items.some(item => item.name === n)) n = `New Folder (${++i})`; if (await window.electronAPI.filesystem.createFolder(currentPath, n)) fetchItems(); } },
             { type: 'item', label: 'New Text File', onClick: async () => { let n = 'New Text File.txt', i = 0; while (items.some(item => item.name === n)) n = `New Text File (${++i}).txt`; if (await window.electronAPI.filesystem.createFile(currentPath, n)) fetchItems(); } },
             { type: 'separator' },
             { type: 'item', label: 'Refresh', onClick: fetchItems },
+            { type: 'separator' },
+            { type: 'item', label: 'Properties', onClick: () => openPropertiesFor(currentFolderItem) },
         ];
     };
 

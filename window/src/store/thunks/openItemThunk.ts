@@ -16,6 +16,21 @@ export const openItem = createAsyncThunk(
         const state = getState() as RootState;
         const nextZIndex = state.windows.nextZIndex;
 
+        if (item.name.endsWith('.shortcut')) {
+            const targetPath = await window.electronAPI.filesystem.readShortcutFile(item.path);
+            if (!targetPath) {
+                console.error(`Could not resolve shortcut: ${item.path}`);
+                return;
+            }
+            const targetProperties = await window.electronAPI.filesystem.getItemProperties(targetPath);
+            if (!targetProperties) {
+                console.error(`Target of shortcut not found: ${targetPath}`);
+                return;
+            }
+            dispatch(openItem(targetProperties));
+            return;
+        }
+
         const openAppWithDef = (appDef: AppDefinition, initialData?: object) => {
             if (appDef.isExternal && appDef.externalPath) {
                 window.electronAPI.launcher.launchExternal(appDef.externalPath);
