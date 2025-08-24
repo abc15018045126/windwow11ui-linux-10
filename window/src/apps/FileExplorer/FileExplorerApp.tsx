@@ -118,10 +118,10 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
     };
 
     const shortcuts = [
-        { name: 'Home', path: '/', icon: 'home' },
-        { name: 'Apps', path: '/apps', icon: 'appfolder' },
-        { name: 'Services', path: '/services', icon: 'appfolder' },
-        { name: 'Window', path: '/window', icon: 'appfolder' },
+        { name: 'Home', path: '/', icon: 'fileExplorer' },
+        { name: 'Apps', path: '/apps', icon: 'folder' },
+        { name: 'Services', path: '/services', icon: 'folder' },
+        { name: 'Window', path: '/window', icon: 'folder' },
     ];
 
     return (
@@ -136,7 +136,7 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
                 </button>
 
                 <div className="flex items-center bg-zinc-900 rounded p-1 text-sm flex-grow border border-zinc-700">
-                    <Icon iconName="home" className="w-4 h-4 mx-1" />
+                    <Icon iconName="fileExplorer" className="w-4 h-4 mx-1" />
                     <button onClick={() => navigateTo('/')} className="hover:underline">Home</button>
                     {breadcrumbParts.map((part, index) => (
                         <React.Fragment key={index}>
