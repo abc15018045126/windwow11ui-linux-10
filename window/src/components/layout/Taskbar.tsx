@@ -143,8 +143,9 @@ const Taskbar: React.FC = () => {
             className="fixed bottom-0 left-0 right-0 bg-gray-800 bg-opacity-80 backdrop-blur-md text-white flex items-center justify-between px-4"
             style={{ height: `${TASKBAR_HEIGHT}px` }}
             onContextMenu={(e) => handleContextMenu(e)}
+            onClick={closeContextMenu}
         >
-            <div className="flex-1 flex justify-center items-center h-full" onClick={closeContextMenu}>
+            <div className="flex-1 flex justify-center items-center h-full">
                 <div className="flex items-center space-x-2 h-full">
                     <button onClick={handleToggleStartMenu} className="p-2 rounded hover:bg-white/20" title="Start">
                         <Icon iconName="start" className="w-6 h-6 text-blue-400" />

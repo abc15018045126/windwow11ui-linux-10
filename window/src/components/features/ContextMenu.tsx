@@ -80,8 +80,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, items, onClose, isSubMe
               onClose();
           }
       };
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
+      document.addEventListener('click', handleClickOutside, true); // Use capture phase
+      return () => document.removeEventListener('click', handleClickOutside, true);
   }, [onClose, isSubMenu]);
 
   // Adjust position to stay within viewport
