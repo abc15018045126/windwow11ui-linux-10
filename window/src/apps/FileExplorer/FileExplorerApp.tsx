@@ -38,8 +38,11 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
     useEffect(() => {
         const pathName = currentPath.split('/').pop() || 'File Explorer';
         setTitle(pathName);
+    }, [currentPath, setTitle]);
+
+    useEffect(() => {
         fetchItems();
-    }, [currentPath, fetchItems, setTitle]);
+    }, [fetchItems]);
 
     const navigateTo = useCallback((path: string) => {
         if (path === currentPath) return;
@@ -107,21 +110,48 @@ const FileExplorerApp: React.FC<AppComponentProps> = ({ setTitle, initialData })
         ];
     };
 
-    const breadcrumbs = ['Desktop', ...currentPath.substring('/Desktop'.length).split('/').filter(p => p)];
+    const breadcrumbParts = currentPath.substring('/Desktop'.length).split('/').filter(p => p);
+
+    const handleBreadcrumbClick = (index: number) => {
+        const newPath = '/Desktop' + (index > 0 ? '/' + breadcrumbParts.slice(0, index).join('/') : '');
+        navigateTo(newPath);
+    };
 
     return (
-        <div className="flex h-full bg-gray-800 text-zinc-200 select-none" onClick={() => { closeContextMenu(); if (renamingItem) handleRenameSubmit(); }}>
-            <main className="flex-grow flex flex-col">
-                <div className="flex-shrink-0 flex items-center space-x-2 p-2 border-b border-zinc-700">
-                    <button onClick={goBack} disabled={historyIndex === 0} className="p-1.5 rounded hover:bg-zinc-700 disabled:opacity-50">Back</button>
-                    <button onClick={goUp} disabled={currentPath === '/Desktop'} className="p-1.5 rounded hover:bg-zinc-700 disabled:opacity-50">Up</button>
-                    <div className="flex items-center bg-zinc-900 rounded p-1 text-sm flex-grow">
-                        {breadcrumbs.join(' > ')}
-                    </div>
+        <div className="flex h-full bg-zinc-900 text-white select-none flex-col" onClick={() => { closeContextMenu(); if (renamingItem) handleRenameSubmit(); }}>
+            {/* Toolbar */}
+            <div className="flex-shrink-0 flex items-center space-x-1 p-2 border-b border-zinc-700 bg-zinc-800">
+                {/* Navigation Buttons */}
+                <button onClick={goBack} disabled={historyIndex === 0} className="p-1.5 rounded hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                </button>
+                <button onClick={goUp} disabled={currentPath === '/Desktop'} className="p-1.5 rounded hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                </button>
+
+                {/* Breadcrumb / Address Bar */}
+                <div className="flex items-center bg-zinc-900 rounded p-1 text-sm flex-grow border border-zinc-700">
+                    <Icon iconName="desktop" className="w-4 h-4 mx-1" />
+                    <button onClick={() => navigateTo('/Desktop')} className="hover:underline">Desktop</button>
+                    {breadcrumbParts.length > 0 && <span className="mx-1 text-zinc-500">/</span>}
+                    {breadcrumbParts.map((part, index) => (
+                        <React.Fragment key={index}>
+                            <button onClick={() => handleBreadcrumbClick(index + 1)} className="hover:underline">{part}</button>
+                            {index < breadcrumbParts.length - 1 && <span className="mx-1 text-zinc-500">/</span>}
+                        </React.Fragment>
+                    ))}
                 </div>
+
+                 {/* Refresh Button */}
+                 <button onClick={fetchItems} className="p-1.5 rounded hover:bg-zinc-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M4 4l1.5 1.5A9 9 0 0120.5 15M20 20l-1.5-1.5A9 9 0 003.5 9" /></svg>
+                </button>
+            </div>
+            {/* Main content */}
+            <main className="flex-grow flex flex-col">
                 <div className="flex-grow p-4 overflow-y-auto" onContextMenu={handleContextMenu}>
                     {isLoading ? <p>Loading...</p> : (
-                        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-4">
+                        <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12 gap-4">
                             {items.map(item => (
                                 <div key={item.path} onContextMenu={(e) => handleContextMenu(e, item)} onDoubleClick={() => openItem(item)} className="flex flex-col items-center p-2 rounded hover:bg-white/10 text-center">
                                     <Icon iconName={item.type === 'folder' ? 'folder' : getFileIconName(item.name)} className="w-12 h-12" />
