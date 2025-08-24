@@ -93,12 +93,14 @@ const Taskbar: React.FC = () => {
     const closeContextMenu = () => setContextMenu(null);
 
     const handleContextMenu = (e: React.MouseEvent, app?: TaskbarApp) => {
+        console.log('[DEBUG] handleContextMenu called. App:', app ? app.name : 'N/A');
         e.preventDefault();
         e.stopPropagation();
         setContextMenu({ x: e.clientX, y: e.clientY, targetApp: app });
     };
 
     const generateContextMenuItems = (): ContextMenuItem[] => {
+        console.log('[DEBUG] generateContextMenuItems called. Target App:', contextMenu?.targetApp?.name);
         const app = contextMenu?.targetApp;
         if (app) {
             const isPinned = pinnedApps.includes(app.id);
@@ -158,7 +160,10 @@ const Taskbar: React.FC = () => {
                             <button
                                 key={buttonKey}
                                 onClick={() => handleAppIconClick(app)}
-                                onContextMenu={(e) => handleContextMenu(e, app)}
+                                onContextMenu={(e) => {
+                                    console.log(`[DEBUG] onContextMenu event fired for app: ${app.name}`);
+                                    handleContextMenu(e, app);
+                                }}
                                 className={`p-2 rounded h-[calc(100%-8px)] flex items-center relative transition-colors duration-150 ease-in-out ${app.isActive ? 'bg-white/20' : 'hover:bg-white/10'}`}
                                 title={app.name}
                             >
