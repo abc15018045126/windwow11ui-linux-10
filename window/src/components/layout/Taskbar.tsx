@@ -92,7 +92,7 @@ const Taskbar: React.FC = () => {
 
     const closeContextMenu = () => setContextMenu(null);
 
-    const handleContextMenu = (e: React.MouseEvent, app?: TaskbarApp) => {
+    const handleContextMenu = (e: React.MouseEvent, app: TaskbarApp) => {
         e.preventDefault();
         e.stopPropagation();
         setContextMenu({ x: e.clientX, y: e.clientY, targetApp: app });
@@ -131,19 +131,13 @@ const Taskbar: React.FC = () => {
 
             return menuItems;
         }
-
-        // Default taskbar menu
-        return [
-            { type: 'item', label: 'Taskbar settings', onClick: () => {}, disabled: true },
-        ];
+        return []; // Return empty for the main taskbar background
     };
 
     return (
         <div
             className="fixed bottom-0 left-0 right-0 bg-gray-800 bg-opacity-80 backdrop-blur-md text-white flex items-center justify-between px-4"
             style={{ height: `${TASKBAR_HEIGHT}px` }}
-            onContextMenu={(e) => handleContextMenu(e)}
-            onClick={closeContextMenu}
         >
             <div className="flex-1 flex justify-center items-center h-full">
                 <div className="flex items-center space-x-2 h-full">
@@ -157,13 +151,7 @@ const Taskbar: React.FC = () => {
                             <button
                                 key={buttonKey}
                                 onClick={() => handleAppIconClick(app)}
-                                onMouseDown={(e) => {
-                                    if (e.button === 2) {
-                                        console.log(`[DEBUG] Right mouse down on app: ${app.name}`);
-                                        handleContextMenu(e, app);
-                                    }
-                                }}
-                                onContextMenu={(e) => e.preventDefault()} // Prevent native menu
+                                onContextMenu={(e) => handleContextMenu(e, app)}
                                 className={`p-2 rounded h-[calc(100%-8px)] flex items-center relative transition-colors duration-150 ease-in-out ${app.isActive ? 'bg-white/20' : 'hover:bg-white/10'}`}
                                 title={app.name}
                             >
