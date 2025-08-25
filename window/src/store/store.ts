@@ -2,12 +2,16 @@ import { configureStore } from '@reduxjs/toolkit';
 import windowReducer from './slices/windowSlice';
 import uiReducer from './slices/uiSlice';
 import clipboardReducer from './slices/clipboardSlice';
+import contextMenuReducer from './slices/contextMenuSlice';
+import desktopReducer from './slices/desktopSlice';
 
 export const store = configureStore({
   reducer: {
     windows: windowReducer,
     ui: uiReducer,
     clipboard: clipboardReducer,
+    contextMenu: contextMenuReducer,
+    desktop: desktopReducer,
   },
 });
 
