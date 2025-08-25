@@ -1,27 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '../../store/store';
-import { toggleStartMenu, pinApp, unpinApp } from '../../store/slices/uiSlice';
-import { _openInternalApp, focusApp, toggleMinimizeApp, closeApp, toggleMaximize } from '../../store/slices/windowSlice';
+import { RootState, AppDispatch } from '../../store/store';
+import { toggleStartMenu } from '../../store/slices/uiSlice';
+import { _openInternalApp, focusApp, toggleMinimizeApp } from '../../store/slices/windowSlice';
 import { getAppDefinitions, getAppDefinitionById } from '../../apps';
 import Icon from '../features/Icon';
 import { AppDefinition, OpenApp } from '../../types';
-import ContextMenu, { ContextMenuItem } from '../features/ContextMenu';
 
 const TASKBAR_HEIGHT = 48;
 
-type TaskbarApp = (AppDefinition | OpenApp) & {
+export type TaskbarApp = (AppDefinition | OpenApp) & {
     isOpen: boolean;
     isActive: boolean;
 };
 
 const Taskbar: React.FC = () => {
-    const dispatch = useDispatch();
+    const dispatch = useDispatch<AppDispatch>();
     const { openApps, activeInstanceId, nextZIndex } = useSelector((state: RootState) => state.windows);
     const { pinnedApps } = useSelector((state: RootState) => state.ui);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [allApps, setAllApps] = useState<AppDefinition[]>([]);
-    const [contextMenu, setContextMenu] = useState<{ x: number; y: number; targetApp?: TaskbarApp } | null>(null);
 
     useEffect(() => {
         const timerId = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -90,54 +88,11 @@ const Taskbar: React.FC = () => {
         }
     };
 
-    const closeContextMenu = () => setContextMenu(null);
-
-    const handleContextMenu = (e: React.MouseEvent, app: TaskbarApp) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setContextMenu({ x: e.clientX, y: e.clientY, targetApp: app });
-    };
-
-    const generateContextMenuItems = (): ContextMenuItem[] => {
-        const app = contextMenu?.targetApp;
-        if (app) {
-            const isPinned = pinnedApps.includes(app.id);
-            const isOpen = 'instanceId' in app && app.isOpen;
-
-            const menuItems: ContextMenuItem[] = [];
-
-            menuItems.push({ type: 'item', label: app.name, disabled: true, onClick: () => {} });
-            menuItems.push({ type: 'separator' });
-
-            if (isOpen) {
-                const openApp = app as OpenApp;
-                if (!openApp.isMaximized) {
-                    menuItems.push({ type: 'item', label: 'Maximize', onClick: () => dispatch(toggleMaximize(openApp.instanceId)) });
-                } else {
-                    menuItems.push({ type: 'item', label: 'Restore', onClick: () => dispatch(toggleMaximize(openApp.instanceId)) });
-                }
-                if (!openApp.isMinimized) {
-                    menuItems.push({ type: 'item', label: 'Minimize', onClick: () => dispatch(toggleMinimizeApp(openApp.instanceId)) });
-                }
-                menuItems.push({ type: 'item', label: 'Close', onClick: () => dispatch(closeApp(openApp.instanceId)) });
-                menuItems.push({ type: 'separator' });
-            }
-
-            if (isPinned) {
-                menuItems.push({ type: 'item', label: 'Unpin from taskbar', onClick: () => dispatch(unpinApp(app.id)) });
-            } else {
-                menuItems.push({ type: 'item', label: 'Pin to taskbar', onClick: () => dispatch(pinApp(app.id)) });
-            }
-
-            return menuItems;
-        }
-        return []; // Return empty for the main taskbar background
-    };
-
     return (
         <div
             className="fixed bottom-0 left-0 right-0 bg-gray-800 bg-opacity-80 backdrop-blur-md text-white flex items-center justify-between px-4"
             style={{ height: `${TASKBAR_HEIGHT}px` }}
+            data-context-menu-type="taskbar-background"
         >
             <div className="flex-1 flex justify-center items-center h-full">
                 <div className="flex items-center space-x-2 h-full">
@@ -151,7 +106,8 @@ const Taskbar: React.FC = () => {
                             <button
                                 key={buttonKey}
                                 onClick={() => handleAppIconClick(app)}
-                                onContextMenu={(e) => handleContextMenu(e, app)}
+                                data-context-menu-type="taskbar-app"
+                                data-context-menu-payload={JSON.stringify(app)}
                                 className={`p-2 rounded h-[calc(100%-8px)] flex items-center relative transition-colors duration-150 ease-in-out ${app.isActive ? 'bg-white/20' : 'hover:bg-white/10'}`}
                                 title={app.name}
                             >
@@ -171,10 +127,6 @@ const Taskbar: React.FC = () => {
                 <div>{currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                 <div>{currentTime.toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
             </div>
-
-            {contextMenu && (
-                <ContextMenu x={contextMenu.x} y={contextMenu.y} items={generateContextMenuItems()} onClose={closeContextMenu} />
-            )}
         </div>
     );
 };
